@@ -1,0 +1,200 @@
+x-default-logging: &default-logging
+  driver: local
+  options:
+    max-size: "5m"
+    max-file: "3"
+
+x-volumes:
+  example: &vol-example
+    type: bind
+    source: ./example
+    target: /example
+  runtime: &vol-runtime
+    type: bind
+    source: ./runtime
+    target: /runtime
+  source: &vol-source
+    type: bind
+    source: ./source
+    target: /source
+    
+name: search
+services:
+  postgres:
+    container_name: search_postgres
+    profiles: [ "serve" ]
+    build:
+      context: .docker/postgresql
+    cap_drop:
+      - NET_ADMIN
+      - SYS_ADMIN
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    ports:
+      - "5432:5432"
+    networks:
+      - search
+    environment:
+      - POSTGRES_DB=main
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    command: [ "postgres", "-c", "wal_level=logical" ]
+    volumes:
+      - *vol-example
+      - *vol-runtime
+      - *vol-source
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d main" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 3s
+      start_interval: 1s
+    logging: *default-logging
+
+  mysql:
+    container_name: search_mysql
+    profiles: [ "serve" ]
+    build:
+      context: .docker/mysql
+    cap_add:
+      - SYS_NICE # CAP_SYS_NICE
+    command: [
+      '--character-set-server=utf8mb4',
+      '--collation-server=utf8mb4_unicode_ci'
+    ]
+    ports:
+      - "3306:3306"
+    networks:
+      - search
+    volumes:
+      - *vol-example
+      - *vol-runtime
+      - *vol-source
+      - mysql_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: main
+      MYSQL_USER: dbuser
+      MYSQL_PASSWORD: dbpassword
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 3s
+      start_interval: 1s
+    logging: *default-logging
+
+  manticore:
+    container_name: search_manticore
+    profiles: [ "serve" ]
+    build:
+      context: .docker/manticore
+      args:
+        UID: ${USER:-1} # ID:1 daemon, support: linux, mac
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 65535
+        hard: 65535
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "3307:3306"
+      - "3308:3308"
+    networks:
+      - search
+    configs:
+      - source: manticore
+        target: /etc/manticoresearch/manticore.conf
+    volumes:
+      - *vol-example
+      - *vol-runtime
+      - *vol-source
+      - manticore_data:/var/lib/manticore
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9308/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 3s
+      start_interval: 1s
+    logging: *default-logging
+
+  opensearch:
+    container_name: search_opensearch
+    profiles: [ "feature" ]
+    build:
+      context: .docker/opensearch/node
+    environment:
+      - discovery.type=single-node # Для разработки
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m # Ограничение памяти
+      - DISABLE_SECURITY_PLUGIN=true
+      - network.host=0.0.0.0
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    networks:
+      - search
+    volumes:
+      - *vol-example
+      - *vol-runtime
+      - *vol-source
+      - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 3s
+      start_interval: 1s
+    logging: *default-logging
+
+  opensearch-dashboards:
+    container_name: search_opensearch_dashboards
+    profiles: [ "feature" ]
+    build:
+      context: .docker/opensearch/dashboards
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+    ports:
+      - "5601:5601"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - search
+#    configs:
+#      - source: opensearch-dashboards
+#        target: /usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
+
+configs:
+  manticore:
+    name: v${VERSION:-1}
+    file: .docker/manticore/manticore.conf
+  opensearch-dashboards:
+    name: v${VERSION:-1}
+    file: .docker/opensearch/dashboards/dashboards.yml
+
+volumes:
+  pg_data:
+  mysql_data:
+  manticore_data:
+  opensearch_data:
+
+networks:
+  search:

@@ -1,0 +1,23 @@
+# phpstorm project files
+.idea
+.zed
+
+# Mac DS_Store Files
+.DS_Store
+
+# zend studio for eclipse project files
+.buildpath
+.project
+.settings
+
+# composer vendor dir
+/vendor
+**/vendor/
+
+# composer
+composer.lock
+
+# phpunit itself is not needed
+phpunit.phar
+.phpunit.result.cache
+

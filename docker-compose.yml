@@ -125,7 +125,7 @@ services:
 
   opensearch:
     container_name: search_opensearch
-    profiles: [ "feature" ]
+    profiles: [ "opensearch" ]
     build:
       context: .docker/opensearch/node
     environment:
@@ -157,7 +157,7 @@ services:
 
   opensearch-dashboards:
     container_name: search_opensearch_dashboards
-    profiles: [ "feature" ]
+    profiles: [ "opensearch" ]
     build:
       context: .docker/opensearch/dashboards
     environment:

@@ -12,7 +12,7 @@ help: ## Display this help screen
 ## App
 
 up: ## Run server
-	USER=$(USER) docker compose --profile serve up -d --remove-orphans --force-recreate
+	USER=$(USER) docker compose --profile serve up -d --remove-orphans
 
 stop: ## Stop server
 	docker compose --profile serve stop
@@ -27,6 +27,8 @@ build:
 	- USER=$(USER) docker compose build postgres
 	- USER=$(USER) docker compose build mysql
 	- USER=$(USER) docker compose build manticore
+	- USER=$(USER) docker compose build opensearch
+	- USER=$(USER) docker compose build opensearch_dashboards
 
 remove: down _image_remove _container_remove _volume_remove
 
@@ -66,6 +68,9 @@ manticore:
 
 manticore-rotate:
 	VERSION=$(VERSION) USER=$(USER) docker compose exec manticore indexer --all --rotate
+
+opensearch:
+	VERSION=$(VERSION) USER=$(USER) docker compose run --rm -u $(USER) -w / opensearch bash
 
 migrate-init:
 	- docker build --target app_devel -t app_cli .docker/php/cli

@@ -11,8 +11,10 @@
   ],
   "require": {
     "php": ">=8.4",
+    "guzzlehttp/guzzle": "^7.1",
     "kuaukutsu/poc-migration": "^0.3",
     "manticoresoftware/manticoresearch-php": "^4.0",
+    "opensearch-project/opensearch-php": "^2.5.1",
     "php-di/php-di": "^7.0",
     "symfony/console": "^7.4"
   },

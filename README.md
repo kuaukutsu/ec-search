@@ -1,6 +1,16 @@
 # Example Code: Full-text search engine (FTS)
 
-## Manticore
+Цель: собрать тестовый стенд на базе двух поисковых движков: ManticoreSearch и OpenSearch, 
+для проверки гипотез, обкатки решений, и покрутить ручки конфигураций.
+В качестве источника: популярыне СУБД (postgres и mysql), и json для организации описка по документам, 
+в том числе и html.
+
+## Settings
+
+**logs** `runtime/manticore/logs{query,searchd}`
+**source** `source{json,sql}`
+
+## Build
 
 ```shell
 make build
@@ -24,12 +34,7 @@ make migrate-init
 make migrate-up
 ```
 
-### Settings
-
-**logs** `runtime/manticore/logs{query,searchd}`
-**source** `source{json,sql}`
-
-### Application
+## Run
 
 ```shell
 make app
@@ -38,6 +43,8 @@ make app
 ```shell
 php app/search.php migrate:{pg,my,json} word
 ```
+
+## Manticore
 
 ### Нюансы
 
@@ -53,3 +60,5 @@ php app/search.php migrate:{pg,my,json} word
 - https://github.com/manticoresoftware/manticoresearch
 - https://github.com/manticoresoftware/manticoresearch-php
 - https://github.com/manticoresoftware/manticoresearch-buddy
+
+## OpenSearch
